@@ -1,0 +1,36 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/.playwright/
+/.playwright-cli/
+
+# Environment files (keep the example template versioned)
+/.env
+/.env.*
+!/.env.example
+
+# Generated reports and test artifacts
+/custom-report/
+/reports/
+/allure-results/
+/allure-report/
+/coverage/
+/dist/
+/build/
+*.trace
+*.trace.zip
+
+# Logs and local build metadata
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
