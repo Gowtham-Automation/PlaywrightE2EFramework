@@ -4,10 +4,12 @@ import { DataProvider } from '../../utils/DataReader.js';
 import { Ajv } from 'ajv';
 import type { AnySchema } from 'ajv';
 import dotenv from 'dotenv';
-import path from 'path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 dotenv.config();
 
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const ajv = new Ajv();
 
 test.describe('JSON Schema Validation Tests', () => {
@@ -33,7 +35,7 @@ test.describe('JSON Schema Validation Tests', () => {
 
         const responseBody = await response.json();
 
-        const schemaPath = path.resolve(__dirname, '../../api/schemas/product_api_schema.json');
+        const schemaPath = path.resolve(currentDirectory, '../../api/schemas/product_api_schema.json');
         const schema = DataProvider.readJson<AnySchema>(schemaPath);
 
         const validate = ajv.compile(schema);
@@ -58,7 +60,7 @@ test.describe('JSON Schema Validation Tests', () => {
 
         const responseBody = await response.json();
 
-        const schemaPath = path.resolve(__dirname, '../../api/schemas/user_api_schema.json');
+        const schemaPath = path.resolve(currentDirectory, '../../api/schemas/user_api_schema.json');
         const schema = DataProvider.readJson<AnySchema>(schemaPath);
 
         const validate = ajv.compile(schema);
@@ -83,7 +85,7 @@ test.describe('JSON Schema Validation Tests', () => {
 
         const responseBody = await response.json();
 
-        const schemaPath = path.resolve(__dirname, '../../api/schemas/cart_api_schema.json');
+        const schemaPath = path.resolve(currentDirectory, '../../api/schemas/cart_api_schema.json');
         const schema = DataProvider.readJson<AnySchema>(schemaPath);
 
         const validate = ajv.compile(schema);

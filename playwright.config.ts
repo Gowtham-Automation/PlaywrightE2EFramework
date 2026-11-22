@@ -5,8 +5,10 @@ import { defineConfig, devices } from '@playwright/test';
  * https://github.com/motdotla/dotenv
  */
 // import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+// import path from 'node:path';
+// import { fileURLToPath } from 'node:url';
+// const configDirectory = path.dirname(fileURLToPath(import.meta.url));
+// dotenv.config({ path: path.resolve(configDirectory, '.env') });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -22,7 +24,10 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers:process.env.CI ? 1 : 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: [
+    ['./utils/CustomReporter.ts'],
+    ['html', { open: 'never' }],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     trace: 'on-first-retry',
@@ -31,6 +36,7 @@ export default defineConfig({
     headless: process.env.CI ? true : false,
     viewport: { width: 1280, height: 720 }, // Set default viewport size for consistency
     ignoreHTTPSErrors: true, // Ignore SSL errors if necessary
+    permissions: ['geolocation'], // Set necessary permissions for geolocation-based tests
   },
 
   /* Configure projects for major browsers */

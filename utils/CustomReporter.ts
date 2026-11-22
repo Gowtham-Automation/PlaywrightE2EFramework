@@ -126,6 +126,7 @@ class CustomReporter implements Reporter {
     private testStartTimeMap: Map<string, number> = new Map();
     private testStepCounterMap: Map<string, number> = new Map();
     private testCounter: number = 0;
+    private totalTests: number = 0;
     private runningTests: Map<string, TestData> = new Map();
     private completedTestIds: Set<string> = new Set();
 
@@ -136,14 +137,15 @@ class CustomReporter implements Reporter {
         this.config = config;
         this.startTime = new Date();
         const totalTests = suite.allTests().length;
+        this.totalTests = totalTests;
 
-        console.log('\n╔════════════════════════════════════════════════════════════════╗');
-        console.log('║        🎭 PLAYWRIGHT AUTOMATION - OPENCART         ║');
-        console.log('╠════════════════════════════════════════════════════════════════╣');
-        console.log(`║  📅 Started: ${this.startTime.toLocaleString().padEnd(47)}║`);
-        console.log(`║  📊 Total Tests: ${String(totalTests).padEnd(44)}║`);
-        console.log(`║  🌐 Environment: ${(process.env.TEST_ENV || 'QA').padEnd(44)}║`);
-        console.log('╚════════════════════════════════════════════════════════════════╝\n');
+        console.log('\n' + '═'.repeat(72));
+        console.log('🎭  PLAYWRIGHT TEST RUN');
+        console.log('═'.repeat(72));
+        console.log(`📅  Started      : ${this.startTime.toLocaleString()}`);
+        console.log(`🧪  Tests         : ${totalTests}`);
+        console.log(`🌐  Environment   : ${process.env.TEST_ENV || 'QA'}`);
+        console.log(`📄  Live report   : ${this.outputFile}\n`);
 
         this.initializeLiveReport();
     }
@@ -154,7 +156,6 @@ class CustomReporter implements Reporter {
             fs.mkdirSync(reportDir, { recursive: true });
         }
         this.updateReportRealTime();
-        console.log(`📡 Real-time report: ${this.outputFile}`);
     }
 
     onTestBegin(test: TestCase): void {
@@ -163,17 +164,21 @@ class CustomReporter implements Reporter {
         this.testStepCounterMap.set(test.id, 0);
         this.testCounter++;
 
-        const testFile = test.location.file.split('/').pop() || '';
-        console.log(`\n▶️  STARTING: ${test.title}`);
-        console.log(`   📁 File: ${testFile}`);
-        console.log(`   📍 Suite: ${test.parent.title}`);
-        console.log('   ─────────────────────────────────────────────────────');
-
+        const testFile = path.relative(this.config.rootDir, test.location.file).replace(/\\/g, '/');
         const describePath: string[] = [];
         let parent: { title: string; parent?: unknown } | undefined = test.parent;
         while (parent && parent.title) {
             describePath.unshift(parent.title);
             parent = parent.parent as { title: string; parent?: unknown } | undefined;
+        }
+
+        console.log(`\n🧪  ${test.title}`);
+        console.log(`    📄 ${testFile}:${test.location.line}`);
+        if (describePath.length > 1) {
+            console.log(`    🗂️  ${describePath.slice(1).map((title) => title.replace(/\\/g, '/')).join(' › ')}`);
+        }
+        if (test.tags.length > 0) {
+            console.log(`    🏷️  ${test.tags.join(' ')}`);
         }
 
         this.runningTests.set(test.id, {
@@ -194,21 +199,13 @@ class CustomReporter implements Reporter {
         this.updateReportRealTime();
     }
 
-    onStepBegin(_test: TestCase, _result: TestResult, step: TestStep): void {
-        if (step.category === 'test.step') {
-            console.log(`   ⏳ ${step.title}...`);
-        }
-    }
-
     onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
         if (step.category === 'test.step') {
-            const duration = step.duration ? `(${step.duration}ms)` : '';
-            const status = step.error ? '❌' : '✅';
-            console.log(`   ${status} ${step.title} ${duration}`);
-
             const testStartTime = this.testStartTimeMap.get(test.id) || Date.now();
             const stepCounter = this.testStepCounterMap.get(test.id) || 0;
             const testSteps = this.testStepsMap.get(test.id) || [];
+            const stepStatus = step.error ? '❌' : '✅';
+            console.log(`    ${stepStatus} Step ${String(stepCounter + 1).padStart(2, '0')}: ${step.title}  (${this.formatDuration(step.duration)})`);
 
             const stepStartTime = new Date(step.startTime).getTime();
             const videoStartTime = stepStartTime - testStartTime;
@@ -253,7 +250,7 @@ class CustomReporter implements Reporter {
         } else if (result.status === 'failed' || result.status === 'timedOut') {
             this.suiteStats.failed++;
             status = result.status === 'timedOut' ? 'timedOut' : 'failed';
-            statusIcon = '❌';
+            statusIcon = result.status === 'timedOut' ? '⏰' : '❌';
         } else {
             this.suiteStats.skipped++;
             status = 'skipped';
@@ -261,13 +258,20 @@ class CustomReporter implements Reporter {
         }
 
         const testTime = this.formatDuration(result.duration);
+        const statusLabel = status === 'timedOut' ? 'TIMED OUT' : status.toUpperCase();
+        const retryLabel = result.retry > 0 ? `  |  🔁 Retry ${result.retry}` : '';
 
-        console.log('   ─────────────────────────────────────────────────────');
-        console.log(`   ${statusIcon} RESULT: ${status.toUpperCase()} | Duration: ${testTime}`);
+        console.log(`\n    ${statusIcon} ${statusLabel}  |  ⏱️ ${testTime}${retryLabel}`);
         if (result.error) {
-            console.log(`   ⚠️  Error: ${result.error.message?.substring(0, 80)}...`);
+            console.log('    📝 Details:');
+            for (const line of (result.error.message || 'No error message was provided.').split('\n')) {
+                console.log(`       ${line}`);
+            }
+            if (result.error.location) {
+                console.log(`    📍 Location: ${result.error.location.file}:${result.error.location.line}:${result.error.location.column}`);
+            }
         }
-        console.log(`\n   📊 Running Total: ✅ ${this.suiteStats.passed} | ❌ ${this.suiteStats.failed} | ⏭️ ${this.suiteStats.skipped}`);
+        console.log(`    📊 Results so far: ✅ ${this.suiteStats.passed} passed  |  ❌ ${this.suiteStats.failed} failed  |  ⏭️ ${this.suiteStats.skipped} skipped`);
 
         const currentTestSteps = this.testStepsMap.get(test.id) || [];
         this.associateLogsWithSteps(test, result, currentTestSteps);
@@ -453,21 +457,19 @@ class CustomReporter implements Reporter {
             ? ((this.suiteStats.passed / this.suiteStats.total) * 100).toFixed(1)
             : '0';
 
-        console.log('\n╔════════════════════════════════════════════════════════════════╗');
-        console.log('║                    📊 FINAL TEST SUMMARY                        ║');
-        console.log('╠════════════════════════════════════════════════════════════════╣');
-        console.log(`║  ✅ Passed:  ${String(this.suiteStats.passed).padEnd(49)}║`);
-        console.log(`║  ❌ Failed:  ${String(this.suiteStats.failed).padEnd(49)}║`);
-        console.log(`║  ⏭️  Skipped: ${String(this.suiteStats.skipped).padEnd(49)}║`);
-        console.log(`║  📊 Total:   ${String(this.suiteStats.total).padEnd(49)}║`);
-        console.log('╠════════════════════════════════════════════════════════════════╣');
-        console.log(`║  ⏱️  Duration: ${duration.padEnd(47)}║`);
-        console.log(`║  📈 Pass Rate: ${(passRate + '%').padEnd(47)}║`);
-        console.log('╚════════════════════════════════════════════════════════════════╝');
+        console.log('\n' + '═'.repeat(72));
+        console.log('🏁  TEST RUN SUMMARY');
+        console.log('─'.repeat(72));
+        console.log(`✅  Passed       : ${this.suiteStats.passed}`);
+        console.log(`❌  Failed       : ${this.suiteStats.failed}`);
+        console.log(`⏭️  Skipped      : ${this.suiteStats.skipped}`);
+        console.log(`🧪  Completed    : ${this.suiteStats.total} / ${this.totalTests}`);
+        console.log(`⏱️  Duration     : ${duration}`);
+        console.log(`📈  Pass rate    : ${passRate}%`);
+        console.log('═'.repeat(72));
 
-        console.log('\n📊 Generating Custom Playwright HTML Report...');
         await this.generateReport();
-        console.log(`✅ Report generated: ${this.outputFile}`);
+        console.log(`\n📊  HTML report: ${this.outputFile}\n`);
     }
 
     private formatTime(date: Date): string {
@@ -483,13 +485,16 @@ class CustomReporter implements Reporter {
     }
 
     private formatDuration(ms: number): string {
-        const seconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        if (minutes > 0) {
-            return `${minutes}m ${remainingSeconds}s`;
+        if (ms < 1000) {
+            return `${Math.round(ms)}ms`;
         }
-        return `${remainingSeconds}s`;
+
+        const seconds = ms / 1000;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes > 0) {
+            return `${minutes}m ${Math.floor(seconds % 60)}s`;
+        }
+        return `${seconds.toFixed(1)}s`;
     }
 
     /* ========== DASHBOARD / CHART HELPER METHODS ========== */
