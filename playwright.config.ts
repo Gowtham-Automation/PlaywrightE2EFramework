@@ -25,8 +25,14 @@ export default defineConfig({
   workers:process.env.CI ? 1 : 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ['./utils/CustomReporter.ts'],
-    ['html', { open: 'never' }],
+    ['list'],                           // Detailed console output
+    //['line'],                         // One-line progress output
+    //['dot'],                          // Minimal console output
+    ['html', { open: 'never', outputFolder: 'reports' }],        // HTML Report
+    //['json', { outputFile: 'reports/results.json' }], // JSON Report
+    ['junit', { outputFile: 'reports/results.xml' }],  // JUnit XML Report
+    ['./utils/CustomReporter.ts'], // Custom reporter
+    ['allure-playwright', { outputFolder: 'allure-results' }],  // Allure Report
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -54,26 +60,6 @@ export default defineConfig({
     // {
     //   name: 'webkit',
     //   use: { ...devices['Desktop Safari'] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
 
