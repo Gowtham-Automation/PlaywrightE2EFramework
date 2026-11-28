@@ -13,7 +13,7 @@ import { test, expect } from '../../fixtures/pageFixtures.js';
 import { RandomDataUtil } from '../../utils/dataGenerator.js';
 import { Helper } from '../../utils/helper.js';
 
-test('End-to-end customer shopping flow @master @end-to-end @web', async ({
+test('End-to-end customer shopping flow @master @end-to-end @web @e2e', async ({
     homePage,
     registerPage,
     loginPage,
