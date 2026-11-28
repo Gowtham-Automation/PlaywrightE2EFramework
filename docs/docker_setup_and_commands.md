@@ -312,14 +312,14 @@ This opens a nice interactive report in your browser where you can see:
 
 ### View the Allure Report
 
-If you have Allure CLI installed on your host:
+The project includes the Allure CLI. After a test run, generate and open the report with:
 
 ```bash
-allure generate allure-results --clean -o allure-report
-allure open allure-report
+npm run allure:generate
+npm run allure:open
 ```
 
-If you don't have Allure CLI, you can still browse the raw JSON files in `allure-results/`.
+The Allure CLI requires Java. The raw result data is also available in `allure-results/`.
 
 ### View Screenshots and Videos
 

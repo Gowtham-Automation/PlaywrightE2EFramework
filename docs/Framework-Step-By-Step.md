@@ -93,6 +93,7 @@ npm install luxon
 npm install ajv csv-parse xlsx
 npm install @axe-core/playwright
 npm install allure-playwright
+npm install -D allure-commandline
 npm install -D @types/node
 npx playwright install
 npm install mysql2
@@ -105,10 +106,11 @@ npm install mysql2
 3. `luxon` — handles dates and times.
 4. `ajv`, `csv-parse`, `xlsx` — validate JSON data and read CSV/Excel test-data files.
 5. `@axe-core/playwright` — adds accessibility checks to your tests.
-6. `allure-playwright` — produces the Allure report used later in this guide.
-7. `@types/node` — gives TypeScript awareness of Node.js built-in features.
-8. `playwright install` — downloads the actual browsers Playwright will control.
-9. `mysql2` — lets your tests connect to a MySQL database.
+6. `allure-playwright` — writes Allure test result data.
+7. `allure-commandline` — generates and opens the browsable Allure HTML report.
+8. `@types/node` — gives TypeScript awareness of Node.js built-in features.
+9. `playwright install` — downloads the actual browsers Playwright will control.
+10. `mysql2` — lets your tests connect to a MySQL database.
 
 Run the `env_setup.bat` file from the terminal.
 
@@ -612,14 +614,22 @@ Update `package.json` to add the following custom scripts for running tagged tes
 npm run test:master
 ```
 
-## Generate and View the Allure Report
+## View the Generated Reports
 
-The Allure reporter was registered in `playwright.config.ts` in Step 2.
+Playwright creates the HTML and custom reports automatically when the test run finishes:
 
 ```bash
-allure generate ./allure-results -o ./allure-report --clean
-allure open ./allure-report
+npx playwright show-report reports
 ```
+
+Open the custom report at `custom-report/index.html`. Generate and open the Allure HTML report with:
+
+```bash
+npm run allure:generate
+npm run allure:open
+```
+
+The Allure reporter is registered in `playwright.config.ts`; the Allure CLI requires Java.
 
 ---
 
@@ -688,9 +698,9 @@ name: 🎭 Playwright Tests
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
     inputs:
       test_suite:
@@ -735,6 +745,12 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: ☕ Set up Java for Allure
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: 📦 Install Dependencies
         run: npm ci
 
@@ -752,9 +768,18 @@ jobs:
           $tag = $suite -replace 'test:', ''
           $browserFlag = "--project=$browser"
           $modeFlag = if ($mode -eq 'headed') { '--headed' } else { '' }
-          npx playwright test --grep "@$tag" $browserFlag $modeFlag --reporter=dot --output=test-results
+          npx playwright test --grep "@$tag" $browserFlag $modeFlag
         env:
           CI: "1"
+
+      - name: 🧾 Generate Allure HTML Report
+        if: always()
+        run: |
+          if (Test-Path "allure-results" -PathType Container) {
+            npm run allure:generate
+          } else {
+            Write-Host "No Allure results were generated; skipping HTML report generation."
+          }
 
       - name: 📊 Upload Playwright HTML Report
         if: always()
@@ -763,6 +788,7 @@ jobs:
           name: playwright-report
           path: reports/
           retention-days: 30
+          if-no-files-found: warn
 
       - name: 📋 Upload Custom Report
         if: always()
@@ -771,16 +797,29 @@ jobs:
           name: custom-report
           path: custom-report/
           retention-days: 30
+          if-no-files-found: warn
 
-      - name: 📈 Upload Allure Results
+      - name: 📈 Upload Allure HTML Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results
-          path: allure-results/
+          name: allure-report
+          path: allure-report/
           retention-days: 30
+          if-no-files-found: warn
+
+      - name: 🧪 Upload Playwright Test Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 30
+          if-no-files-found: ignore
 
 ```
+
+After the workflow completes, open its **Summary** page and download the `playwright-report`, `custom-report`, and `allure-report` artifacts. Extract each artifact and open its `index.html` in a browser. GitHub Actions stores these artifacts for 30 days; it does not render the HTML report inline in the log.
 
 ---
 

@@ -18,6 +18,8 @@ if errorlevel 1 goto :error
 echo [4/7] Installing Allure reporting...
 call npm install allure-playwright
 if errorlevel 1 goto :error
+call npm install -D allure-commandline
+if errorlevel 1 goto :error
 
 echo [5/7] Installing Node.js TypeScript type definitions...
 call npm install -D @types/node

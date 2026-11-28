@@ -9,7 +9,8 @@
   "description": "",
   "devDependencies": {
     "@playwright/test": "^1.64.1",
-    "@types/node": "^26.6.5"
+    "@types/node": "^26.6.5",
+    "allure-commandline": "^2.46.2"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.14.0",
@@ -32,6 +33,8 @@
     "test:datadriven": "playwright test --grep @datadriven",
     "test:master:headed": "playwright test --grep @sanity --headed",
     "test:sanity:debug": "playwright test --grep @sanity --debug",
-    "test:web:registration": "playwright test --grep @registration"
-}
+    "test:web:registration": "playwright test --grep @registration",
+    "allure:generate": "allure generate allure-results --clean --output allure-report",
+    "allure:open": "allure open allure-report"
+  }
 }
